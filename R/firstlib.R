@@ -1,3 +1,3 @@
-.First.lib <- function(lib, pkg) {
-  library.dynam("peer", pkg, lib)
+.onLoad <- function(libname, pkgname) {
+  library.dynam("peer", pkgname, libname)
 }
