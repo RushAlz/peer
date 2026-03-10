@@ -6,7 +6,8 @@ library(peer)
 
 cat("=== PEER OpenMP Performance Benchmark ===\n\n")
 
-max_threads <- PEER_getNThreads()
+m_tmp <- PEER()
+max_threads <- PEER_getNThreads(m_tmp)
 thread_counts <- unique(c(1, 2, 4, 8, min(16, max_threads)))
 thread_counts <- thread_counts[thread_counts <= max_threads]
 
@@ -16,13 +17,13 @@ cat(sprintf("Thread counts: %s\n\n", paste(thread_counts, collapse = ", ")))
 run_bench <- function(N, P, Nk, Niter, threads, reps = 3) {
   times <- numeric(reps)
   for (r in seq_len(reps)) {
-    PEER_setNThreads(threads)
     set.seed(42)
     pheno <- matrix(rnorm(N * P), N, P)
     model <- PEER()
     PEER_setPhenoMean(model, pheno)
     PEER_setNk(model, Nk)
     PEER_setNmax_iterations(model, Niter)
+    PEER_setNThreads(model, threads)
     times[r] <- system.time(PEER_update(model))["elapsed"]
   }
   median(times)

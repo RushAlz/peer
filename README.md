@@ -23,7 +23,7 @@ The original source bundles Eigen 2.92 (~2010), which fails to compile under C++
 |--------|--------|
 | **OpenMP parallelization** of 5 hot loops | Multi-core speedup (3-10x at 4-16 threads) |
 | **Reproducible RNG**: `randn()` uses R's `unif_rand()` instead of C's `rand()` | `set.seed()` now controls PEER initialization. **This changes results vs the original** (which used an independent, non-seedable C RNG) |
-| **`PEER_setNThreads()` / `PEER_getNThreads()`** | Control thread count from R without env vars |
+| **`PEER_setNThreads(model, n)` / `PEER_getNThreads(model)`** | Control thread count from R without env vars |
 | **Ctrl+C support** via `R_CheckUserInterrupt()` | Long runs can be cancelled |
 | **Improved verbose output** | Shows dimensions, threads, residual variance, timing per iteration |
 
@@ -80,10 +80,10 @@ PEER uses OpenMP to parallelize the dominant per-phenotype loops. On multi-core 
 
 ```r
 # Check current thread count
-PEER_getNThreads()
+PEER_getNThreads(model)
 
 # Set thread count (takes effect immediately, no restart needed)
-PEER_setNThreads(4)
+PEER_setNThreads(model, 4)
 ```
 
 Alternatively, set the `OMP_NUM_THREADS` environment variable before starting R:

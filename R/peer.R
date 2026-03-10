@@ -217,7 +217,7 @@ class(`setVerbose`) = c("SWIGFunction", class('setVerbose'))
 
 # Start of PEER_setNThreads
 
-`PEER_setNThreads` = function(nthreads)
+`PEER_setNThreads` = function(self, nthreads)
 {
   nthreads = as.integer(nthreads);
 
@@ -230,16 +230,19 @@ class(`setVerbose`) = c("SWIGFunction", class('setVerbose'))
 }
 
 attr(`PEER_setNThreads`, 'returnType') = 'void'
-attr(`PEER_setNThreads`, "inputTypes") = c('integer')
+attr(`PEER_setNThreads`, "inputTypes") = c('_p_PEER__cSPARSEFA', 'integer')
+class(`PEER_setNThreads`) = c("SWIGFunction", class('PEER_setNThreads'))
 
 # Start of PEER_getNThreads
 
-`PEER_getNThreads` = function()
+`PEER_getNThreads` = function(self)
 {
   ;.Call('R_peer_getNThreads', FALSE, PACKAGE='peer');
 }
 
 attr(`PEER_getNThreads`, 'returnType') = 'integer'
+attr(`PEER_getNThreads`, "inputTypes") = c('_p_PEER__cSPARSEFA')
+class(`PEER_getNThreads`) = c("SWIGFunction", class('PEER_getNThreads'))
 
 # Start of cWNodeSparse_pi_set
 
@@ -1233,7 +1236,7 @@ class(`PEER_init_net_sparse`) = c("SWIGFunction", class('PEER_init_net_sparse'))
 setMethod('$', '_p_PEER__cSPARSEFA', function(x, name)
 
 {
-  accessorFuns = list('setSigmaOff' = PEER_setSigmaOff, 'getSigmaOff' = PEER_getSigmaOff, 'getNj' = PEER_getNj, 'getNp' = PEER_getNp, 'getNk' = PEER_getNk, 'getNc' = PEER_getNc, 'getNmax_iterations' = PEER_getNmax_iterations, 'getTolerance' = PEER_getTolerance, 'getVarTolerance' = PEER_getVarTolerance, 'getAdd_mean' = PEER_getAdd_mean, 'getPriorEpsA' = PEER_getPriorEpsA, 'getPriorEpsB' = PEER_getPriorEpsB, 'getPriorAlphaA' = PEER_getPriorAlphaA, 'getPriorAlphaB' = PEER_getPriorAlphaB, 'setSparsityPrior' = PEER_setSparsityPrior, 'getSparsityPrior' = PEER_getSparsityPrior, 'getZ' = PEER_getZ, 'setNk' = PEER_setNk, 'setAdd_mean' = PEER_setAdd_mean, 'setNmax_iterations' = PEER_setNmax_iterations, 'setTolerance' = PEER_setTolerance, 'setVarTolerance' = PEER_setVarTolerance, 'setPriorAlphaA' = PEER_setPriorAlphaA, 'setPriorAlphaB' = PEER_setPriorAlphaB, 'setPriorEpsA' = PEER_setPriorEpsA, 'setPriorEpsB' = PEER_setPriorEpsB, 'setPriorAlpha' = PEER_setPriorAlpha, 'setPriorEps' = PEER_setPriorEps, 'init_net' = PEER_init_net, 'calcBound' = PEER_calcBound, 'logprob' = PEER_logprob, 'update' = PEER_update, 'setPhenoMean' = PEER_setPhenoMean, 'setPhenoVar' = PEER_setPhenoVar, 'setCovariates' = PEER_setCovariates, 'getPhenoMean' = PEER_getPhenoMean, 'getPhenoVar' = PEER_getPhenoVar, 'getCovariates' = PEER_getCovariates, 'getX' = PEER_getX, 'getW' = PEER_getW, 'getEps' = PEER_getEps, 'getAlpha' = PEER_getAlpha, 'getResiduals' = PEER_getResiduals, 'getBounds' = PEER_getBounds, 'getResidualVars' = PEER_getResidualVars, 'init_net_sparse' = PEER_init_net_sparse);
+  accessorFuns = list('setSigmaOff' = PEER_setSigmaOff, 'getSigmaOff' = PEER_getSigmaOff, 'getNj' = PEER_getNj, 'getNp' = PEER_getNp, 'getNk' = PEER_getNk, 'getNc' = PEER_getNc, 'getNmax_iterations' = PEER_getNmax_iterations, 'getTolerance' = PEER_getTolerance, 'getVarTolerance' = PEER_getVarTolerance, 'getAdd_mean' = PEER_getAdd_mean, 'getPriorEpsA' = PEER_getPriorEpsA, 'getPriorEpsB' = PEER_getPriorEpsB, 'getPriorAlphaA' = PEER_getPriorAlphaA, 'getPriorAlphaB' = PEER_getPriorAlphaB, 'setSparsityPrior' = PEER_setSparsityPrior, 'getSparsityPrior' = PEER_getSparsityPrior, 'getZ' = PEER_getZ, 'setNk' = PEER_setNk, 'setAdd_mean' = PEER_setAdd_mean, 'setNmax_iterations' = PEER_setNmax_iterations, 'setTolerance' = PEER_setTolerance, 'setVarTolerance' = PEER_setVarTolerance, 'setPriorAlphaA' = PEER_setPriorAlphaA, 'setPriorAlphaB' = PEER_setPriorAlphaB, 'setPriorEpsA' = PEER_setPriorEpsA, 'setPriorEpsB' = PEER_setPriorEpsB, 'setPriorAlpha' = PEER_setPriorAlpha, 'setPriorEps' = PEER_setPriorEps, 'init_net' = PEER_init_net, 'calcBound' = PEER_calcBound, 'logprob' = PEER_logprob, 'update' = PEER_update, 'setPhenoMean' = PEER_setPhenoMean, 'setPhenoVar' = PEER_setPhenoVar, 'setCovariates' = PEER_setCovariates, 'getPhenoMean' = PEER_getPhenoMean, 'getPhenoVar' = PEER_getPhenoVar, 'getCovariates' = PEER_getCovariates, 'getX' = PEER_getX, 'getW' = PEER_getW, 'getEps' = PEER_getEps, 'getAlpha' = PEER_getAlpha, 'getResiduals' = PEER_getResiduals, 'getBounds' = PEER_getBounds, 'getResidualVars' = PEER_getResidualVars, 'init_net_sparse' = PEER_init_net_sparse, 'setNThreads' = PEER_setNThreads, 'getNThreads' = PEER_getNThreads);
   ;        idx = pmatch(name, names(accessorFuns));
   if(is.na(idx)) 
   return(callNextMethod(x, name));

@@ -20,7 +20,6 @@ check <- function(name, condition) {
 }
 
 run_peer <- function(N, P, Nk, Niter, threads, covs_cols = 0, seed = 42) {
-  PEER_setNThreads(threads)
   set.seed(seed)
   pheno <- matrix(rnorm(N * P), N, P)
   covs <- if (covs_cols > 0) matrix(rnorm(N * covs_cols), N, covs_cols) else NULL
@@ -28,6 +27,7 @@ run_peer <- function(N, P, Nk, Niter, threads, covs_cols = 0, seed = 42) {
   PEER_setPhenoMean(model, pheno)
   PEER_setNk(model, Nk)
   PEER_setNmax_iterations(model, Niter)
+  PEER_setNThreads(model, threads)
   if (!is.null(covs)) PEER_setCovariates(model, covs)
   PEER_update(model)
   list(
@@ -110,10 +110,11 @@ check("Bounds increase (MT)", length(res1_mt$bounds) <= 1 || all(diff(res1_mt$bo
 
 # --- Test 8: PEER_setNThreads / PEER_getNThreads ---
 cat("\nTest 8: Thread control API\n")
-PEER_setNThreads(3)
-check("getNThreads returns 3", PEER_getNThreads() == 3)
-PEER_setNThreads(1)
-check("getNThreads returns 1", PEER_getNThreads() == 1)
+m <- PEER()
+PEER_setNThreads(m, 3)
+check("getNThreads returns 3", PEER_getNThreads(m) == 3)
+PEER_setNThreads(m, 1)
+check("getNThreads returns 1", PEER_getNThreads(m) == 1)
 
 # --- Summary ---
 cat(sprintf("\n=== Results: %d passed, %d failed ===\n", pass_count, fail_count))
