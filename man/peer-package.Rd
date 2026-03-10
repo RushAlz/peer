@@ -42,18 +42,19 @@
 \alias{PEER_getZ}
 \alias{PEER_setNmax_iterations}
 \alias{PEER_setPriorEpsA}
-peer-\alias{package}
+%% peer-\alias{package}
 \alias{PEER_getEps}
 \alias{PEER_getPhenoVar}
 \alias{PEER_getSigmaOff}
 \alias{PEER_init_net}
 \alias{PEER_setPhenoMean}
+\alias{PEER_setNThreads}
+\alias{PEER_getNThreads}
 \alias{PEER_plotModel}
 \alias{PEER_plotQtl}
 \docType{package}
 \title{
-PEER is a collection of Bayesian approaches to infer hidden determinants and their effects from gene expression profiles using factor analysis methods.
-~~ package title ~~
+PEER: Probabilistic Estimation of Expression Residuals
 }
 \description{
 
@@ -64,27 +65,47 @@ The PEER model, inference, and applications are described in ``A Bayesian framew
 Joint Genetic Analysis of Gene Expression Data with Inferred Cellular Phenotypes. (PLoS Genetics, January 2011)
 and several other projects have successfully used PEER.
 
-This project offers an efficient and versatile C++ implementation of the underlying algorithms with user-friendly interfaces to R and python. To get started using PEER, download the source or binary versions, see the installation instructions, and take a look at the getting started tutorial.
+This project offers an efficient and versatile C++ implementation of the underlying algorithms with user-friendly interfaces to R and python. The core loops are parallelized with OpenMP for multi-core speedup. To get started using PEER, download the source or binary versions, see the installation instructions, and take a look at the getting started tutorial.
+}
+\section{Differences from the original PEER package}{
+This is a patched fork of the original PEER package (v1.3, Stegle et al.)
+with the following changes. The underlying inference algorithm is unchanged,
+but results will not be bitwise identical to the original due to the RNG
+change below.
 
-~~ A concise (1-5 lines) description of the package ~~
+\describe{
+  \item{Modern compiler support}{Fixed Eigen 2.92 compatibility issues with
+    g++ 11+ and C++17 (macro syntax, deprecated keywords).}
+  \item{OpenMP parallelization}{The 5 dominant per-phenotype/per-sample loops
+    are parallelized with OpenMP. New functions \code{PEER_setNThreads(n)}
+    and \code{PEER_getNThreads()} control thread count at runtime.}
+  \item{Reproducible RNG}{The internal random number generator now uses R's
+    RNG (\code{unif_rand()}) instead of C's \code{rand()}, so
+    \code{set.seed()} controls PEER's random initialization. The original
+    used an independent C RNG that was not seedable from R.}
+  \item{Interruptible}{Long-running \code{PEER_update()} calls can be
+    cancelled with Ctrl+C (via \code{R_CheckUserInterrupt()} between
+    iterations).}
+  \item{Improved logging}{Verbose output now shows data dimensions, thread
+    count, residual variance, per-iteration timing, and total wall time.}
+}
 }
 \details{
 \tabular{ll}{
 Package: \tab peer\cr
 Type: \tab Package\cr
-Version: \tab 1.0\cr
-Date: \tab 2011-09-18\cr
+Version: \tab 1.4.0\cr
+Date: \tab 2026-03-10\cr
 License: \tab CC BY-NC-SA 3.0\cr
 LazyLoad: \tab yes\cr
 }
-~~ An overview of how to use the package, including the most important ~~
-~~ functions ~~
 }
 \author{
-Oliver Stegle, Matias Piipari, Leopold Parts
+Oliver Stegle, Matias Piipari, Leopold Parts (original PEER)
 
-Maintainer: Matias Piipari <matias.piipari@gmail.com>
-~~ The author and/or maintainer of the package ~~
+Shinya Tasaki (modern compiler fixes, OpenMP, enhancements)
+
+Maintainer: Shinya Tasaki <Shinya_Tasaki@rush.edu>
 }
 \references{
 
@@ -92,15 +113,41 @@ A Bayesian framework to account for complex non-genetic factors in gene expressi
 
 Joint Genetic Analysis of Gene Expression Data with Inferred Cellular Phenotypes. (PLoS Genetics, January 2011)
 
-~~ Literature or other references for background information ~~
 }
-~~ Optionally other standard keywords, one per line, from file KEYWORDS in ~~
-~~ the R documentation directory ~~
 \keyword{ package }
-\seealso{
-~~ Optional links to other man pages, e.g. ~~
-~~ \code{\link[<pkg>:<pkg>-package]{<pkg>}} ~~
+\section{Parallelization (OpenMP)}{
+PEER uses OpenMP to parallelize the dominant per-phenotype loops in the
+variational inference. On multi-core machines this gives significant speedup,
+especially with larger numbers of factors (Nk).
+
+Use \code{PEER_setNThreads(n)} to set the number of threads within an R
+session, or set the \code{OMP_NUM_THREADS} environment variable before
+starting R. Use \code{PEER_getNThreads()} to query the current setting.
+
+PEER's random initialization is controlled by R's \code{set.seed()}, so
+results are reproducible. With a single thread, results are bitwise
+identical across runs. With multiple threads, results may differ at the
+~1e-10 level due to floating-point accumulation order.
 }
 \examples{
-~~ simple examples of the most important functions ~~
+model <- PEER()
+
+# Set expression data (samples x genes)
+PEER_setPhenoMean(model, matrix(rnorm(50 * 100), 50, 100))
+
+# Set number of hidden factors
+PEER_setNk(model, 10)
+
+# Control parallelization
+PEER_setNThreads(4)
+PEER_getNThreads()
+
+# Run inference (Ctrl+C to interrupt)
+PEER_update(model)
+
+# Extract results
+factors   <- PEER_getX(model)
+weights   <- PEER_getW(model)
+precision <- PEER_getAlpha(model)
+residuals <- PEER_getResiduals(model)
 }

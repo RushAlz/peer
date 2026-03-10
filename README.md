@@ -1,10 +1,12 @@
-# peer — Patched for Modern Compilers
+# peer — Patched & Enhanced
 
 R package for **PEER** (Probabilistic Estimation of Expression Residuals), a Bayesian factor analysis method for inferring hidden determinants from gene expression data.
 
-This is a patched fork of the [original PEER R package](https://github.com/PMBio/peer) (v1.0, Stegle et al. 2011) that compiles with modern C++ compilers (g++ 11+, C++17) without requiring legacy toolchains.
+This is a patched fork of the [original PEER R package](https://github.com/PMBio/peer) (v1.3, Stegle et al. 2012) that compiles with modern C++ compilers (g++ 11+, C++17) and adds OpenMP parallelization, reproducible seeding, and other improvements. **The underlying inference algorithm is unchanged**, but results will not be bitwise identical to the original due to the RNG change (see below).
 
-## What was fixed
+## What changed from the original
+
+### Compiler fixes
 
 The original source bundles Eigen 2.92 (~2010), which fails to compile under C++11+ due to:
 
@@ -14,6 +16,16 @@ The original source bundles Eigen 2.92 (~2010), which fails to compile under C++
 | `std::binder1st/2nd`, `register` keyword (removed in C++17) | Various Eigen headers | Suppressed via `-Wno-deprecated -Wno-register` in `Makevars` |
 | Pre-compiled `libpeer.so` in source tree | `src/` | Removed |
 | Deprecated `.First.lib` loader | `R/firstlib.R` | Modernized to `.onLoad` |
+
+### Enhancements
+
+| Change | Impact |
+|--------|--------|
+| **OpenMP parallelization** of 5 hot loops | Multi-core speedup (3-10x at 4-16 threads) |
+| **Reproducible RNG**: `randn()` uses R's `unif_rand()` instead of C's `rand()` | `set.seed()` now controls PEER initialization. **This changes results vs the original** (which used an independent, non-seedable C RNG) |
+| **`PEER_setNThreads()` / `PEER_getNThreads()`** | Control thread count from R without env vars |
+| **Ctrl+C support** via `R_CheckUserInterrupt()` | Long runs can be cancelled |
+| **Improved verbose output** | Shows dimensions, threads, residual variance, timing per iteration |
 
 ## Install
 
@@ -115,6 +127,11 @@ PEER reports progress during `PEER_update()` at two verbosity levels:
 # Level 2: adds bound value and convergence deltas
 peer:::setVerbose(2)
 ```
+
+## Authors
+
+- **Original PEER**: Oliver Stegle, Matias Piipari, Leopold Parts
+- **This fork (v1.4.0)**: Shinya Tasaki (modern compiler fixes, OpenMP, enhancements)
 
 ## Citation
 
