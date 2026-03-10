@@ -19,6 +19,7 @@
 #include "sparsefa.h"
 #include "bayesnet.h"
 #include <chrono>
+#include <R_ext/Utils.h>
 #ifdef _OPENMP
 #include <omp.h>
 #endif
@@ -445,6 +446,7 @@ void cSPARSEFA::update()
 
 	for(i=0; i < this->Nmax_iterations; ++i)
 	{
+		R_CheckUserInterrupt();
 		auto iter_start = std::chrono::steady_clock::now();
 
 		//W

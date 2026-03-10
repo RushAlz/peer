@@ -11,6 +11,7 @@
 #include <assert.h>
 #include <vector>
 #include <chrono>
+#include <R_ext/Utils.h>
 #include "bayesnet.h"
 #include <Eigen/Eigen>
 #include <Eigen/Dense>
@@ -500,6 +501,7 @@ void cVBFA::update(){
 
 	for(i=0; i < this->Nmax_iterations; ++i)
 	{
+		R_CheckUserInterrupt();
 		auto iter_start = std::chrono::steady_clock::now();
 
 		W->update(this);
