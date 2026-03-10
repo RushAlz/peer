@@ -1,7 +1,7 @@
 Package: peer
 Type: Package
 Title: PEER is a collection of Bayesian approaches to infer hidden determinants and their effects from gene expression profiles using factor analysis methods.
-Version: 1.4.0
+Version: 1.5.0
 Date: 2026-03-10
 Author: Oliver Stegle, Matias Piipari, Leopold Parts (original PEER),
     Shinya Tasaki (modern compiler fixes, OpenMP, enhancements)
