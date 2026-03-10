@@ -9,11 +9,15 @@
 
 #include "array_helper.h"
 #include "ossolog.h"
+#include <R.h>
+#include <Rmath.h>
 
 
 /******************************************************************************/
 //	Standard version with trigonometric calls
+#ifndef PI
 #define PI 3.14159265358979323846
+#endif
 
 double randn(double mu, double sigma) {
 	static bool deviateAvailable=false;	//	flag
@@ -27,8 +31,8 @@ double randn(double mu, double sigma) {
 		
 		//	choose a pair of uniformly distributed deviates, one for the
 		//	distance and one for the angle, and perform transformations
-		dist=sqrt( -2.0 * log(double(rand()) / double(RAND_MAX)) );
-		angle=2.0 * PI * (double(rand()) / double(RAND_MAX));
+		dist=sqrt( -2.0 * log(unif_rand()) );
+		angle=2.0 * PI * unif_rand();
 		
 		//	calculate and store first deviate and set flag
 		storedDeviate=dist*cos(angle);

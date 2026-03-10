@@ -1393,14 +1393,48 @@ R_swig_setVerbose ( SEXP verbose)
   unsigned int r_nprotect = 0;
   SEXP r_ans = R_NilValue ;
   VMAXTYPE r_vmax = vmaxget() ;
-  
+
   arg1 = static_cast< int >(INTEGER(verbose)[0]);
   PEER::setVerbose(arg1);
   r_ans = R_NilValue;
-  
+
   vmaxset(r_vmax);
   if(r_nprotect)  Rf_unprotect(r_nprotect);
-  
+
+  return r_ans;
+}
+
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
+SWIGEXPORT SEXP
+R_peer_setNThreads ( SEXP nthreads)
+{
+  int arg1 ;
+  SEXP r_ans = R_NilValue ;
+
+  arg1 = static_cast< int >(INTEGER(nthreads)[0]);
+#ifdef _OPENMP
+  omp_set_num_threads(arg1);
+#endif
+  r_ans = R_NilValue;
+
+  return r_ans;
+}
+
+SWIGEXPORT SEXP
+R_peer_getNThreads ( SEXP s_copy)
+{
+  SEXP r_ans = R_NilValue ;
+  int result = 1;
+
+#ifdef _OPENMP
+  result = omp_get_max_threads();
+#endif
+  r_ans = Rf_ScalarInteger(result);
+
   return r_ans;
 }
 
@@ -4127,6 +4161,8 @@ SWIGINTERN R_CallMethodDef CallEntries[] = {
    {"R_swig_cWNodeSparse_tauOn_set", (DL_FUNC) &R_swig_cWNodeSparse_tauOn_set, 2},
    {"R_swig_getVerbose", (DL_FUNC) &R_swig_getVerbose, 1},
    {"R_swig_setVerbose", (DL_FUNC) &R_swig_setVerbose, 1},
+   {"R_peer_setNThreads", (DL_FUNC) &R_peer_setNThreads, 1},
+   {"R_peer_getNThreads", (DL_FUNC) &R_peer_getNThreads, 1},
    {"R_swig_PEER_getZ", (DL_FUNC) &R_swig_PEER_getZ, 1},
    {"R_swig_PEER_getNmax_iterations", (DL_FUNC) &R_swig_PEER_getNmax_iterations, 2},
    {"R_swig_PEER_setNmax_iterations", (DL_FUNC) &R_swig_PEER_setNmax_iterations, 2},

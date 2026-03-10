@@ -9,12 +9,17 @@
 
 #include <iostream>
 #include <assert.h>
+#include <vector>
+#include <chrono>
 #include "bayesnet.h"
 #include <Eigen/Eigen>
 #include <Eigen/Dense>
 #include "vbfa.h"
 #include "sparsefa.h"
 #include "ossolog.h"
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 
 using namespace Eigen;
@@ -87,13 +92,32 @@ void cWNode::update(cBayesNet* net){
 	// for each phenotype, calculate covariance and mean of weight
 	PMatrix diagAE1 = PMatrix::Zero(n->Nk,n->Nk);
 	diagAE1.diagonal() = n->Alpha->E1;
+
+	int nthreads_a = 1;
+#ifdef _OPENMP
+	nthreads_a = omp_get_max_threads();
+#endif
+	std::vector<PMatrix> E2S_local_a(nthreads_a, PMatrix::Zero(n->Nk, n->Nk));
+	std::vector<PMatrix> Xprec_local_a(nthreads_a, PMatrix::Zero(n->Nk, n->Nk));
+	std::vector<double> lndetcovS_local_a(nthreads_a, 0.0);
+
+#pragma omp parallel for schedule(dynamic)
 	for(int i = 0; i < n->Np; i++){
+		int tid_a = 0;
+#ifdef _OPENMP
+		tid_a = omp_get_thread_num();
+#endif
 		PMatrix cov = (diagAE1 + n->X->E2S*n->Eps->E1(i,0)).inverse(); // linalg.inv(diag(Alpha.E1) + Eps[d]*M)
-		lndetcovS += logdet(cov);
+		lndetcovS_local_a[tid_a] += logdet(cov);
 		E1.row(i) = n->Eps->E1(i,0)*cov*n->X->E1.transpose()*n->pheno->E1.col(i); //  self.E1[d,:] = S.dot(dcov[:,:],Eps[d]*S.dot(_S.E1.T,net.dataNode.E1[ :,d]))
 		PMatrix E2 = (cov + E1.row(i).transpose()*E1.row(i)); //  E2 = dcov + outer(self.E1[d], self.E1[d])
-		E2S += E2;
-		Xprec += n->Eps->E1(i,0)*E2;
+		E2S_local_a[tid_a] += E2;
+		Xprec_local_a[tid_a] += n->Eps->E1(i,0)*E2;
+	}
+	for(int t = 0; t < nthreads_a; t++){
+		lndetcovS += lndetcovS_local_a[t];
+		E2S += E2S_local_a[t];
+		Xprec += Xprec_local_a[t];
 	}
 	
 	
@@ -131,16 +155,42 @@ void cXNode::update(cBayesNet* net){
 	
 	cov = (n->W->Xprec + prior_prec).inverse();
 	E1 = PMatrix::Zero(n->Nj, n->Nk);
+	int nthreads_b = 1;
+#ifdef _OPENMP
+	nthreads_b = omp_get_max_threads();
+#endif
+	std::vector<PMatrix> E1_local_b(nthreads_b, PMatrix::Zero(n->Nj, n->Nk));
+#pragma omp parallel for schedule(dynamic)
 	for (int i=0; i < n->Np; i++){
-		E1 += n->Eps->E1(i,0)*n->pheno->E1.col(i)*n->W->E1.row(i);
+		int tid_b = 0;
+#ifdef _OPENMP
+		tid_b = omp_get_thread_num();
+#endif
+		E1_local_b[tid_b] += n->Eps->E1(i,0)*n->pheno->E1.col(i)*n->W->E1.row(i);
+	}
+	for (int t = 0; t < nthreads_b; t++){
+		E1 += E1_local_b[t];
 	}
 	E1 = (E1 + prior_offset*prior_prec)*cov;
         E1.block(0,0,n->Nj,n->Nc) = prior_offset.block(0,0,n->Nj,n->Nc); // overwrite covariates with prior setting
 	
 	E2S = n->Nj*cov;
+	int nthreads_c = 1;
+#ifdef _OPENMP
+	nthreads_c = omp_get_max_threads();
+#endif
+	std::vector<PMatrix> E2S_local_c(nthreads_c, PMatrix::Zero(n->Nk, n->Nk));
+#pragma omp parallel for schedule(dynamic)
 	for (int i = 0; i < n->Nj; ++i){
-		E2S += E1.row(i).transpose()*E1.row(i);
+		int tid_c = 0;
+#ifdef _OPENMP
+		tid_c = omp_get_thread_num();
+#endif
+		E2S_local_c[tid_c] += E1.row(i).transpose()*E1.row(i);
 	} // the covariance matrix is shared by design between individuals
+	for (int t = 0; t < nthreads_c; t++){
+		E2S += E2S_local_c[t];
+	}
 }
 
 
@@ -198,6 +248,7 @@ void cEpsNode::update(cBayesNet* net){
 	PMatrix b3 = PMatrix::Zero(n->Np,1);
 	PMatrix diagAE1 = PMatrix::Zero(n->Nk,n->Nk);
 	diagAE1.diagonal() = n->W->A_last;
+#pragma omp parallel for schedule(dynamic)
 	for(int i = 0; i < n->Np; i++){
     	PMatrix Wcov = (diagAE1 + n->W->XE2S_last*n->Eps->E1(i,0)).inverse(); // calculate current covariance matrix of W (cannot use updated values for X,A)
 		b3(i,0) = (n->X->E2S.array()*(Wcov + n->W->E1.row(i).transpose()*n->W->E1.row(i)).array()).sum();
@@ -435,13 +486,23 @@ void cVBFA::update(){
 	double delta_bound = HUGE_VAL;
 	double delta_residual_var = HUGE_VAL;
 	int i=0;
+
+	auto wall_start = std::chrono::steady_clock::now();
+
+	if (VERBOSE>=1)
+	{
+		int nthreads = 1;
+#ifdef _OPENMP
+		nthreads = omp_get_max_threads();
+#endif
+		printf("\tPEER update: Nj=%d, Np=%d, Nk=%d, Nc=%d, threads=%d\n", Nj, Np, Nk, Nc, nthreads);
+	}
+
 	for(i=0; i < this->Nmax_iterations; ++i)
 	{
-		if (VERBOSE>=1)
-			printf("\titeration %d/%d\n",i,Nmax_iterations);
-		
-		
-		W->update(this);		
+		auto iter_start = std::chrono::steady_clock::now();
+
+		W->update(this);
 		if((VERBOSE>=3) && (i > 0) )
 		{cout << "\tAfter W " << calcBound() << "\tResidual variance " << calc_residuals().array().pow(2.).mean() << endl;}
 		Alpha->update(this);
@@ -450,10 +511,10 @@ void cVBFA::update(){
 		X->update(this);
 		if (VERBOSE>=3)
 			cout << "\tAfter X " << calcBound() << "\tResidual variance " << calc_residuals().array().pow(2.).mean() << endl;
-		Eps->update(this);		
+		Eps->update(this);
 		if (VERBOSE>=3)
 			cout << "\tAfter E " << calcBound() << "\tResidual variance " << calc_residuals().array().pow(2.).mean() << endl;
-		
+
 		//calc bound?
 		if ((VERBOSE>=2) || (tolerance>0))
 		{
@@ -465,38 +526,53 @@ void cVBFA::update(){
 			delta_residual_var = last_residual_var - current_residual_var; // variance should decrease
 			Tbound[i] = current_bound;
 		}
-		
+
 		//debug output?
 		double res_var = getResiduals().array().array().pow(2.).mean();
 		Tresidual_varaince[i] = res_var;
-		if (VERBOSE>=2)
+
+		if (VERBOSE>=1)
 		{
-			ULOG_INFO("Residual variance: %.4f, Delta bound: %.4f, Delta var(residuals): %.4f\n",res_var,delta_bound, delta_residual_var);
+			auto iter_end = std::chrono::steady_clock::now();
+			double iter_sec = std::chrono::duration<double>(iter_end - iter_start).count();
+			double wall_sec = std::chrono::duration<double>(iter_end - wall_start).count();
+			if (VERBOSE>=2)
+			{
+				printf("\titeration %d/%d | var(resid)=%.4f | bound=%.2f | dBound=%.4f | dVar=%.6f | %.2fs/iter | %.1fs elapsed\n",
+					i, Nmax_iterations, res_var, current_bound, delta_bound, delta_residual_var, iter_sec, wall_sec);
+			}
+			else
+			{
+				printf("\titeration %d/%d | var(resid)=%.4f | %.2fs/iter | %.1fs elapsed\n",
+					i, Nmax_iterations, res_var, iter_sec, wall_sec);
+			}
 		}
-		
+
 		//converged?
 		if (abs(delta_bound)<tolerance)
 			break;
 		if (abs(delta_residual_var)<var_tolerance)
 			break;
-	
+
 		//increase iteration counter
-		Niterations+=1;	
+		Niterations+=1;
 	//endfor
 	}
-	
+
 	//debug output on convergence?
 	if (VERBOSE>=1)
 	{
+		auto wall_end = std::chrono::steady_clock::now();
+		double total_sec = std::chrono::duration<double>(wall_end - wall_start).count();
 		if(abs(delta_bound)<tolerance)
 		{
-			ULOG_INFO("Converged (bound) after %d iterations\n", i);
+			printf("\tConverged (bound) after %d iterations in %.1fs\n", i, total_sec);
 		}
 		else if(abs(delta_residual_var) < var_tolerance){
-			ULOG_INFO("Converged (var(residuals)) after %d iterations\n", i);
+			printf("\tConverged (var(residuals)) after %d iterations in %.1fs\n", i, total_sec);
 		}
 		else {
-			ULOG_INFO("Maximum number of iterations reached: %d\n",i);
+			printf("\tMaximum iterations reached: %d (%.1fs)\n", i, total_sec);
 		}
 	}
 }
@@ -517,9 +593,22 @@ double cVBFA::logprob()
 	double r2 = -0.5*Eps->E1.col(0).dot((PMatrix::Ones(1, Nj)*pheno->E2).row(0));
 	double r3 = -0.5*Eps->E1.col(0).dot(-2.*(PMatrix::Ones(1, Nj)*((pheno->E1.array()*(X->E1*W->E1.transpose()).array()).matrix())).transpose().col(0));
 	double r4 = 0;
+	int nthreads_e = 1;
+#ifdef _OPENMP
+	nthreads_e = omp_get_max_threads();
+#endif
+	std::vector<double> r4_local(nthreads_e, 0.0);
+#pragma omp parallel for schedule(dynamic)
 	for(int i=0; i < Np; ++i){
+		int tid_e = 0;
+#ifdef _OPENMP
+		tid_e = omp_get_thread_num();
+#endif
 		PMatrix WE2 = (diagAE1 + W->XE2S_last*W->E_last(i,0)).inverse() + W->E1.row(i).transpose()*W->E1.row(i);
-		r4 -= 0.5*Eps->E1(i,0)*(X->E2S.array()*WE2.array()).sum();
+		r4_local[tid_e] -= 0.5*Eps->E1(i,0)*(X->E2S.array()*WE2.array()).sum();
+	}
+	for(int t = 0; t < nthreads_e; t++){
+		r4 += r4_local[t];
 	}
 	//cout << "R: " << r1 << " " << r2 << " " << r3 << " " << r4 << endl;
 	return r1 + r2 + r3 + r4;

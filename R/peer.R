@@ -215,6 +215,32 @@ attr(`setVerbose`, 'returnType') = 'void'
 attr(`setVerbose`, "inputTypes") = c('integer')
 class(`setVerbose`) = c("SWIGFunction", class('setVerbose'))
 
+# Start of PEER_setNThreads
+
+`PEER_setNThreads` = function(nthreads)
+{
+  nthreads = as.integer(nthreads);
+
+  if(length(nthreads) > 1) {
+    warning("using only the first element of nthreads");
+  };
+
+  ;.Call('R_peer_setNThreads', nthreads, PACKAGE='peer');
+
+}
+
+attr(`PEER_setNThreads`, 'returnType') = 'void'
+attr(`PEER_setNThreads`, "inputTypes") = c('integer')
+
+# Start of PEER_getNThreads
+
+`PEER_getNThreads` = function()
+{
+  ;.Call('R_peer_getNThreads', FALSE, PACKAGE='peer');
+}
+
+attr(`PEER_getNThreads`, 'returnType') = 'integer'
+
 # Start of cWNodeSparse_pi_set
 
 `cWNodeSparse_pi_set` = function(self, s_pi)

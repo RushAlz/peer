@@ -18,6 +18,10 @@
 #include "sparsefa.h"
 #include "sparsefa.h"
 #include "bayesnet.h"
+#include <chrono>
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 
 using namespace Eigen;
@@ -427,28 +431,39 @@ void cSPARSEFA::update()
 	double delta_bound = HUGE_VAL;
 	double delta_residual_var = HUGE_VAL;
 	int i=0;
+
+	auto wall_start = std::chrono::steady_clock::now();
+
+	if (VERBOSE>=1)
+	{
+		int nthreads = 1;
+#ifdef _OPENMP
+		nthreads = omp_get_max_threads();
+#endif
+		printf("\tPEER update: Nj=%d, Np=%d, Nk=%d, Nc=%d, threads=%d\n", Nj, Np, Nk, Nc, nthreads);
+	}
+
 	for(i=0; i < this->Nmax_iterations; ++i)
 	{
-		if (VERBOSE>=1)
-			printf("\titeration %d/%d\n",i,Nmax_iterations);
-				
+		auto iter_start = std::chrono::steady_clock::now();
+
 		//W
 		if (VERBOSE>=4)
 			std::cout << W->E1 << "\n\n";
-		W->update(this);		
+		W->update(this);
 		if (VERBOSE>=4)
 			std::cout << W->E1 << "\n\n";
 		if((VERBOSE>=3) && (i > 0) )
 		{cout << "\tAfter W " << calcBound() << "\tResidual variance " << calc_residuals().array().pow(2.).mean() << endl;}
-		
-		//Alha?
+
+		//Alpha?
 		if (Alpha!=NULL)
 		{
 			Alpha->update(this);
 			if((VERBOSE>=3) && (i > 0) )
 			{cout << "\tAfter A " << calcBound() << "\tResidual variance " << calc_residuals().array().pow(2.).mean() << endl;}
 		}
-		
+
 		//X
 		if (VERBOSE>=4)
 			std::cout << X->E1 << "\n\n";
@@ -457,7 +472,7 @@ void cSPARSEFA::update()
 			std::cout << X->E1 << "\n\n";
 		if (VERBOSE>=3)
 			cout << "\tAfter X " << calcBound() << "\tResidual variance " << calc_residuals().array().pow(2.).mean() << endl;
-		
+
 		//EPS
 		if (VERBOSE>=4)
 			std::cout << Eps->E1 << "\n\n";
@@ -466,8 +481,8 @@ void cSPARSEFA::update()
 			std::cout << Eps->E1 << "\n\n";
 		if (VERBOSE>=3)
 			cout << "\tAfter E " << calcBound() << "\tResidual variance " << calc_residuals().array().pow(2.).mean() << endl;
-		
-		
+
+
 		//calc bound?
 		if ((VERBOSE>=2) || (tolerance>0))
 		{
@@ -480,15 +495,27 @@ void cSPARSEFA::update()
 			delta_residual_var = last_residual_var - current_residual_var; // variance should decrease
 			Tbound[i] = current_bound;
 		}
-		
+
 		double res_var = getResiduals().array().array().pow(2.).mean();
 		Tresidual_varaince[i] = res_var;
-		//debug output?			
-		if (VERBOSE>=2)
+
+		if (VERBOSE>=1)
 		{
-			ULOG_INFO("Residual variance: %.4f, Delta bound: %.4f, Delta var(residuals): %.4f\n",res_var,delta_bound, delta_residual_var);
+			auto iter_end = std::chrono::steady_clock::now();
+			double iter_sec = std::chrono::duration<double>(iter_end - iter_start).count();
+			double wall_sec = std::chrono::duration<double>(iter_end - wall_start).count();
+			if (VERBOSE>=2)
+			{
+				printf("\titeration %d/%d | var(resid)=%.4f | bound=%.2f | dBound=%.4f | dVar=%.6f | %.2fs/iter | %.1fs elapsed\n",
+					i, Nmax_iterations, res_var, current_bound, delta_bound, delta_residual_var, iter_sec, wall_sec);
+			}
+			else
+			{
+				printf("\titeration %d/%d | var(resid)=%.4f | %.2fs/iter | %.1fs elapsed\n",
+					i, Nmax_iterations, res_var, iter_sec, wall_sec);
+			}
 		}
-			
+
 		//converged?
 		if (abs(delta_bound)<tolerance)
 			break;
@@ -497,19 +524,21 @@ void cSPARSEFA::update()
 		Niterations+=1;
 	//endfor
 	}
-		
+
 	//debug output on convergence?
 	if (VERBOSE>=1)
 	{
+		auto wall_end = std::chrono::steady_clock::now();
+		double total_sec = std::chrono::duration<double>(wall_end - wall_start).count();
 		if(abs(delta_bound)<tolerance)
 		{
-			ULOG_INFO("Converged (bound) after %d iterations\n", i);
+			printf("\tConverged (bound) after %d iterations in %.1fs\n", i, total_sec);
 		}
 		else if(abs(delta_residual_var) < var_tolerance){
-			ULOG_INFO("Converged (var(residuals)) after %d iterations\n", i);
+			printf("\tConverged (var(residuals)) after %d iterations in %.1fs\n", i, total_sec);
 		}
 		else {
-			ULOG_INFO("Maximum number of iterations reached: %d\n",i);
+			printf("\tMaximum iterations reached: %d (%.1fs)\n", i, total_sec);
 		}
 	}
 	
