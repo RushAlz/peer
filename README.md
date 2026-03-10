@@ -37,6 +37,8 @@ model <- PEER()
 ## Usage
 
 ```r
+library(peer)
+
 model <- PEER()
 
 # Set expression data (samples x genes matrix)
@@ -56,6 +58,62 @@ factors    <- PEER_getX(model)      # hidden factors
 weights    <- PEER_getW(model)      # factor weights
 precision  <- PEER_getAlpha(model)  # factor relevance
 residuals  <- PEER_getResiduals(model)
+```
+
+## Parallelization (OpenMP)
+
+PEER uses OpenMP to parallelize the dominant per-phenotype loops. On multi-core machines this gives significant speedup, especially with larger numbers of factors (Nk).
+
+### Controlling threads
+
+```r
+# Check current thread count
+PEER_getNThreads()
+
+# Set thread count (takes effect immediately, no restart needed)
+PEER_setNThreads(4)
+```
+
+Alternatively, set the `OMP_NUM_THREADS` environment variable before starting R:
+
+```bash
+OMP_NUM_THREADS=4 Rscript my_script.R
+```
+
+### Reproducibility
+
+PEER's random initialization is controlled by R's `set.seed()`, so results are fully reproducible:
+
+```r
+set.seed(42)
+PEER_update(model)  # same result every time (with same thread count)
+```
+
+With a single thread, results are bitwise identical across runs. With multiple threads, results may differ at the ~1e-10 level due to floating-point accumulation order, but are functionally equivalent.
+
+### Typical speedup
+
+Benchmarks on 200 samples x 2000 genes, 20 iterations:
+
+| Nk | 1 thread | 4 threads | 8 threads | 16 threads |
+|----|----------|-----------|-----------|------------|
+| 20 | 1.6s     | 0.6s (2.9x) | 0.4s (4.1x) | 0.3s (4.9x) |
+| 50 | 9.4s     | 2.6s (3.6x) | 1.5s (6.4x) | 0.9s (10.6x) |
+
+Larger Nk (more factors) scales better because per-iteration K³ matrix inversions dominate.
+
+### Verbose output
+
+PEER reports progress during `PEER_update()` at two verbosity levels:
+
+```r
+# Level 1 (default): iteration count, residual variance, timing
+#   PEER update: Nj=200, Np=2000, Nk=20, Nc=0, threads=4
+#   iteration 0/20 | var(resid)=1.0012 | 0.03s/iter | 0.0s elapsed
+#   Converged (bound) after 15 iterations in 0.5s
+
+# Level 2: adds bound value and convergence deltas
+peer:::setVerbose(2)
 ```
 
 ## Citation
