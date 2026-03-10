@@ -8,14 +8,13 @@ This is a patched fork of the [original PEER R package](https://github.com/PMBio
 
 ### Compiler fixes
 
-The original source bundles Eigen 2.92 (~2010), which fails to compile under C++11+ due to:
+The original source bundled Eigen 2.92 (~2010), which fails to compile under C++11+. This fork **upgrades to Eigen 3.4.0** (the latest stable release) and applies the following additional fixes:
 
-| Issue | File | Fix |
-|-------|------|-----|
-| `EIGEN_ASM_COMMENT` macro uses `"#"X` (invalid user-defined literal in C++11+) | `src/Eigen/src/Core/util/Macros.h` | Changed to `"#" #X` (proper token pasting) |
-| `std::binder1st/2nd`, `register` keyword (removed in C++17) | Various Eigen headers | Suppressed via `-Wno-deprecated -Wno-register` in `Makevars` |
-| Pre-compiled `libpeer.so` in source tree | `src/` | Removed |
-| Deprecated `.First.lib` loader | `R/firstlib.R` | Modernized to `.onLoad` |
+| Issue | Fix |
+|-------|-----|
+| Bundled Eigen 2.92 incompatible with C++11+ | Upgraded to Eigen 3.4.0 |
+| Pre-compiled `libpeer.so` in source tree | Removed |
+| Deprecated `.First.lib` loader | Modernized to `.onLoad` |
 
 ### Enhancements
 
