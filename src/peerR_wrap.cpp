@@ -3126,7 +3126,11 @@ R_swig_PEER_update ( SEXP self)
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PEER_update" "', argument " "1"" of type '" "PEER::cSPARSEFA *""'"); 
   }
   arg1 = reinterpret_cast< PEER::cSPARSEFA * >(argp1);
-  (arg1)->update();
+  try {
+    (arg1)->update();
+  } catch (const std::exception& e) {
+    Rf_error("%s", e.what());
+  }
   r_ans = R_NilValue;
   
   vmaxset(r_vmax);

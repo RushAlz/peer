@@ -19,6 +19,9 @@
 #include "sparsefa.h"
 #include "bayesnet.h"
 #include <chrono>
+#include <cmath>
+#include <stdexcept>
+#include <string>
 #include <R_ext/Utils.h>
 #ifdef _OPENMP
 #include <omp.h>
@@ -516,6 +519,16 @@ void cSPARSEFA::update()
 				printf("\titeration %d/%d | var(resid)=%.4f | %.2fs/iter | %.1fs elapsed\n",
 					i, Nmax_iterations, res_var, iter_sec, wall_sec);
 			}
+
+		}
+
+		if (std::isnan(res_var) || std::isinf(res_var)){
+			throw std::runtime_error(
+				"PEER iteration " + std::to_string(i) +
+				": var(resid) is " + (std::isnan(res_var) ? "NaN" : "Inf") +
+				". This typically indicates multicollinearity in the known covariates "
+				"(e.g. dummy variables that sum to a constant). "
+				"Check the condition number of your covariate matrix.");
 		}
 
 		//converged?
