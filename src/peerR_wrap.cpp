@@ -10,6 +10,14 @@
 
 #define SWIGR
 
+#ifdef __cplusplus
+/* Pull in <cstddef> here, outside of any extern "C" block, so that the
+ * C++ standard library templates it declares (e.g. std::byte) are not
+ * re-parsed with C linkage when <Rdefines.h> is later included inside
+ * an extern "C" block below (which pulls in <R_ext/Memory.h> -> <cstddef>). */
+#include <cstddef>
+#endif
+
 
 #ifdef __cplusplus
 /* SwigValueWrapper is described in swig.swg */
