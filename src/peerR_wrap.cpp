@@ -753,6 +753,14 @@ extern "C" {
 #include <stdlib.h>
 #include <assert.h>
 
+/* SET_S4_OBJECT was removed from the public API in newer R versions
+ * (it remains available only when USE_RINTERNALS is defined). Provide
+ * a compatibility shim built on top of Rf_asS4, which is part of the
+ * stable API and sets/unsets the S4 bit on an object. */
+#ifndef SET_S4_OBJECT
+#define SET_S4_OBJECT(x) (Rf_asS4((x), TRUE, 0))
+#endif
+
 #if R_VERSION >= R_Version(2,6,0)
 #define VMAXTYPE void *
 #else
